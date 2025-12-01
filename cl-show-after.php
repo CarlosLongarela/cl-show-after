@@ -2,8 +2,15 @@
 /**
  * Plugin Name: CL Show After
  * Description: Shortcode to show enclosed content only after a specific date and time.
- * Version: 1.0.0
+ * Version: 1.0.2
  * Author: Carlos Longarela
+ * Author URI: https://tabernawp.com
+ * License: GPL-2.0+
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: cl-show-after
+ * Domain Path: /languages
+ * Requires at least: 6.5
+ * Requires PHP: 8.1
  *
  * @package CL Show After
  * @author  Carlos Longarela
@@ -39,28 +46,20 @@ function cl_show_after_shortcode( $atts, $content = null ) {
 		return '';
 	}
 
-	// Get WP timezone.
-	$timezone_string = get_option( 'timezone_string' );
-
-	// If timezone_string is empty, it means manual offset is used (e.g., UTC+1).
-	if ( ! $timezone_string ) {
-		$gmt_offset     = get_option( 'gmt_offset' );
-		$offset_hours   = (int) $gmt_offset;
-		$offset_minutes = ( $gmt_offset - $offset_hours ) * 60;
-		$offset_string  = sprintf( '%+03d:%02d', $offset_hours, abs( $offset_minutes ) );
-		try {
-			$timezone = new DateTimeZone( $offset_string );
-		} catch ( Exception $e ) {
-			$timezone = new DateTimeZone( 'UTC' );
-		}
-	} else {
-		$timezone = new DateTimeZone( $timezone_string );
-	}
-
 	try {
-		// Create DateTime objects for target and current time in the site's timezone.
-		$target_dt  = new DateTime( $atts['date-time'], $timezone );
-		$current_dt = new DateTime( 'now', $timezone );
+		// Get WP timezone using modern WP function.
+		$timezone = wp_timezone();
+
+		// Validate and create DateTime object for target time.
+		$target_dt = DateTime::createFromFormat( 'Y-m-d H:i', $atts['date-time'], $timezone );
+
+		// Check if the format matches strictly.
+		if ( ! $target_dt || $target_dt->format( 'Y-m-d H:i' ) !== $atts['date-time'] ) {
+			return '';
+		}
+
+		// Get current time using modern WP function.
+		$current_dt = current_datetime();
 
 		// Compare timestamps.
 		if ( $current_dt >= $target_dt ) {
